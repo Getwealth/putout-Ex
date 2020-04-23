@@ -11,7 +11,9 @@
           align="right"
           type="date"
           placeholder="选择日期"
-          :picker-options="pickerOptions">
+          :picker-options="pickerOptions"
+           format="yyyy 年 MM 月 dd 日"
+      value-format="yyyy-MM-dd">
         </el-date-picker>
     </div>
     <div class="status">
@@ -30,7 +32,7 @@
           </el-option>
         </el-select>
         <el-input v-model="input" max-length="200" placeholder="请输入内容"></el-input>
-        <el-button type="success">导出</el-button>
+        <el-button type="success" @click="export2Excel">导出</el-button>
     </div>
     <div class="data-table">
           <el-table :data="tableData" style="width: 100%">
@@ -86,7 +88,7 @@ export default {
         },
         {
           value: '1',
-          label: '项目id'
+          label: '项目负责人'
         }],
         value:'',
         input:'',
@@ -193,22 +195,60 @@ export default {
     category(status){
       if(status==="全部"){
        this.tableData=JSON.parse(window.sessionStorage.getItem('data'));
-       window.console.log(this.tableData);
       }else{
          let arr = JSON.parse(window.sessionStorage.getItem('data'));
-      this.tableData=arr.filter(ele=>ele.status===status);
-     
+        this.tableData=arr.filter(ele=>ele.status===status);
       }
     },
     save(){
        let list = this.tableData;
       window.sessionStorage.setItem('data',JSON.stringify(list));
-    }
-  },
+    },
+    search(kind,userInput){
+        let arr =JSON.parse(window.sessionStorage.getItem('data'));
+        let newArr=[];
+        if(kind==0){
+            arr.forEach(function(va){
+             if(va.name.match(userInput)){
+               newArr.push(va);
+             }else{
+                 return false;
+             }
+            });
+            this.tableData=newArr;
+        }else if(kind==1){
+          this.tableData=arr.filter(ele=>ele.person===userInput);
+        }
+    },
+    timechange(nowDate){
+       let arr =JSON.parse(window.sessionStorage.getItem('data'));
+       this.tableData=arr.filter(ele=>ele.date===nowDate);
+    },
+    formatJson(filterVal, jsonData) {
+    return jsonData.map(v => filterVal.map(j => v[j]))
+},
+    export2Excel(){
+         const {export_json_to_excel} = require('../vendor/Export2Excel');         
+         const tHeader = ['序号', '项目名称', '项目时间','项目负责人','项目状态'];
+         const filterVal = ['id', 'name', 'date','person','status'];
+         const list = this.tableData;
+         const data = this.formatJson(filterVal, list);
+         export_json_to_excel(tHeader, data, 'productExcel')
+ }},
   mounted(){
     this.save();
-  }
-};
+  },
+  watch:{
+    value:function(){
+      this.search(this.value,this.input);
+    },
+    input:function(){
+      this.search(this.value,this.input);
+    },
+    value2:function(){
+     this.timechange(this.value2);
+    }
+  }}
 </script>
 <style scope>
    .el-header, .el-footer {
